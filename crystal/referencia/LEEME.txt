@@ -1,0 +1,5 @@
+Aqui van los RPT de referencia (se agregan con: git add -f crystal/referencia/*.rpt)
+
+  RTCTLCT6_original.rpt  -> remito estandar antes del cambio
+  RTCTLCT6_con_QR.rpt    -> remito modificado con @URL_QR y la imagen del QR
+                            (sin campos de prueba y sin "Guardar datos con el informe")

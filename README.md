@@ -86,3 +86,15 @@ Para poder reproducir la solución sin depender del entorno de prueba:
 |---|---|---|
 | UFL `CRUFLQRRemito.dll` | 0.3 | `QRRemitoMainProbar`, `QRRemitoMainGenerarQR` |
 | Apps Script | 1.2 | Parámetro `cl` para el cliente; bloquea estados repetidos; Entregado es final |
+
+## Archivos binarios de referencia
+
+| Archivo | Dónde | ¿Versionar? |
+|---|---|---|
+| `CRUFLQRRemito.dll` (v0.3, 12.800 bytes) | `ufl/bin/` | **Sí.** Se puede regenerar con `ufl/compilar.ps1`, pero conviene tener la DLL probada. |
+| `RTCTLCT6_original.rpt` | `crystal/referencia/` | **Sí** (con `git add -f`). Remito estándar antes del cambio. |
+| `RTCTLCT6_con_QR.rpt` | `crystal/referencia/` | **Sí** (con `git add -f`). Remito modificado; antes de guardarlo, sacar los campos de prueba y desmarcar **Archivo → Guardar datos con el informe**. |
+| `CRUFLQRRemito.tlb` | — | **No.** Se genera al registrar con RegAsm `/tlb`. |
+| `u2lcom.dll` | — | **No.** Es parte del runtime de Crystal XI R2 (SAP) y ya está en las PC con Bejerman; el instalador solo la copia de carpeta. Versión usada: 47.616 bytes, 19/02/2010. |
+
+> Los RPT son diseños de Bejerman y pueden tener personalizaciones del cliente: mantener el repositorio **privado**.
