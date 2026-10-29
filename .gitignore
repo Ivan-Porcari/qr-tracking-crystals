@@ -1,0 +1,18 @@
+# Se genera al registrar la DLL (RegAsm /tlb)
+*.tlb
+
+# Archivos temporales de la generacion de QR / logs
+*.tmp
+*.log
+qr_*.bmp
+
+# Reportes de clientes (pueden contener personalizaciones y datos propios del cliente).
+# Si se quiere versionar un RPT de referencia, agregarlo de forma explicita con: git add -f
+*.rpt
+*.RPT
+
+# Windows / editores
+Thumbs.db
+desktop.ini
+.vs/
+.vscode/

@@ -1,0 +1,65 @@
+QR EN REMITO - CAMBIOS A APLICAR EN EL RPT DEL CLIENTE (RTCTLCT6.rpt)
+=====================================================================
+Requisitos previos en cada PC que imprime remitos:
+  - Ejecutar instalar_qr_remito.ps1 (registra CRUFLQRRemito.dll y copia u2lcom.dll a C:\Windows\crystal).
+  - Para editar el RPT: Crystal Reports XI R2 (misma version que el runtime de Bejerman), con la DLL
+    tambien instalada en esa PC (si no, la funcion no aparece en el editor de formulas).
+
+IMPORTANTE: aplicar estos cambios sobre el RPT ACTUAL del cliente (puede tener personalizaciones).
+Hacer backup del RPT antes de modificarlo.
+
+
+1) FORMULA @URL_QR
+------------------
+Explorador de campos -> Campos de formula -> Nuevo -> nombre: URL_QR
+Reemplazar PENDIENTE por el ID real del Web App de Apps Script cuando este publicado.
+(Web App de prueba, cuenta soporte2@ebvinzia.com.ar: AKfycbzuTV2sSFlUbMKyQz2-tUSsWev4U5QgeSs5zTw34jvwuWdliAHDFmOQjFW5TEiZlzd1)
+
+WhilePrintingRecords;
+Local StringVar base := "https://script.google.com/macros/s/PENDIENTE/exec";
+Local StringVar nro  := Replace({@Cab_Nro}, " ", "");
+Local StringVar cli  := Replace(Trim({TmpRem.CodigoCliProv}), " ", "%20");
+Local StringVar s    := nro + "|" + cli;
+Local NumberVar h    := 7919;
+Local NumberVar i;
+For i := 1 To Length(s) Do
+(
+    h := Remainder(h * 31 + Asc(Mid(s, i, 1)), 999983)
+);
+base + "?r=" + nro + "&cl=" + cli + "&k=" + ToText(h, 0, "")
+
+Notas:
+  - Usa {@Cab_Nro}, que es lo que el remito imprime como numero (punto de venta + numero, y en
+    talonarios con rtl_ContTransp = "3" suma el numero de pagina). Asi el QR siempre coincide con
+    el numero impreso. Si en el RPT del cliente la formula de numero tiene otro nombre, ajustar.
+  - "k" es un numero de control (hash de "remito|cliente": semilla 7919, x31 + ASCII, modulo 999983).
+    El Web App hace la misma cuenta para validar que nadie edito la URL a mano.
+    Ejemplo verificado: remito 00001-00000001, cliente 000004 -> k=249497.
+  - Si se cambia la semilla 7919, hay que cambiarla tambien en el Apps Script.
+
+
+2) IMAGEN DEL QR
+----------------
+- Insertar -> Imagen... -> elegir cualquier .bmp (solo para crear el objeto).
+- Ubicarla en el Pie de pagina, completamente dentro de la seccion y con margen inferior
+  (si queda pegada al borde de la hoja, la impresora puede cortarla).
+- Clic derecho -> Dar formato a grafico... -> pestana Imagen:
+    Tamano: 2,5 cm x 2,5 cm (aprox.)
+    "Ubicacion del grafico" (boton x+2):
+
+QRRemitoMainGenerarQR({@URL_QR})
+
+
+3) (OPCIONAL) TEXTO DE LA URL
+-----------------------------
+Durante las pruebas se imprimio @URL_QR como texto (fuente 7, campo alto para 2 lineas) para comparar
+con lo que lee el celular. En produccion se puede quitar o dejar chico debajo del QR.
+
+
+4) VERIFICACION
+---------------
+- Imprimir un remito desde Bejerman (a PDF) -> debe aparecer el QR.
+- Escanearlo con el celular -> debe abrir la URL del Web App con r=, cl= y k= del remito.
+  (El parametro del cliente es "cl", NO "c": Apps Script reserva "c" y "sid" y con "c=" la URL no abre.)
+- Si aparece "Falta UFL 'u2lcom.dll'": falta copiar u2lcom.dll a C:\Windows\crystal (lo hace el instalador).
+- Si el QR no aparece y no hay error: revisar %TEMP%\QRRemito_error.log del usuario que imprime.

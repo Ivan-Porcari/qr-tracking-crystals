@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #eceff1; color: #263238; }
+    .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
+    .card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.12); margin-bottom: 14px; }
+    h1 { font-size: 15px; font-weight: 600; color: #607d8b; margin: 0 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+    .remito { font-size: 26px; font-weight: 700; margin: 0 0 6px; }
+    .cliente { font-size: 16px; color: #455a64; }
+    .ultimo { font-size: 14px; color: #546e7a; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eceff1; }
+    label { display: block; font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+    select, textarea { width: 100%; font-size: 17px; padding: 12px; border: 1px solid #b0bec5; border-radius: 8px; background: #fff; }
+    textarea { min-height: 80px; resize: vertical; }
+    .btn { display: block; width: 100%; border: 0; border-radius: 10px; padding: 18px; font-size: 19px; font-weight: 700; color: #fff; margin-top: 12px; cursor: pointer; }
+    .btn:disabled { opacity: .5; }
+    .btn.bloqueado, .btn.bloqueado:disabled { background: #cfd8dc; color: #78909c; opacity: 1; cursor: not-allowed; }
+    .aviso { font-size: 14px; color: #546e7a; text-align: center; margin-top: 12px; }
+    .final { text-align: center; font-size: 18px; font-weight: 700; color: #2e7d32; padding: 8px 0; }
+    .b-Despachado { background: #f9a825; }
+    .b-Entregado  { background: #2e7d32; }
+    .b-Rechazado  { background: #c62828; }
+    .b-confirmar  { background: #1565c0; }
+    .b-volver     { background: #78909c; }
+    .oculto { display: none; }
+    .msg { text-align: center; font-size: 20px; font-weight: 700; padding: 24px 8px; }
+    .ok { color: #2e7d32; }
+    .error { color: #c62828; }
+    .chico { font-size: 14px; font-weight: 400; color: #546e7a; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+  var D = <?!= datos ?>;
+  var elegido = null;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function guardarNombre(n) { try { localStorage.setItem('qrRemitoTransportista', n); } catch (e) {} }
+  function leerNombre() { try { return localStorage.getItem('qrRemitoTransportista') || ''; } catch (e) { return ''; } }
+
+  function textoUltimo(u) {
+    if (!u || !u.estado) return 'Sin registros todavia';
+    return 'Ultimo estado: <b>' + esc(u.estado) + '</b> (' + esc(u.fecha) + ' - ' + esc(u.transportista) + ')';
+  }
+
+  function render() {
+    var app = document.getElementById('app');
+    if (!D.valido) {
+      app.innerHTML = '<div class="card msg error">Codigo QR no valido<div class="chico">Escanea el QR impreso en el remito. Si el problema sigue, avisale a la oficina.</div></div>';
+      return;
+    }
+    var guardado = leerNombre();
+    var opciones = '<option value="">Elegi tu nombre...</option>' + D.transportistas.map(function (n) {
+      return '<option' + (n === guardado ? ' selected' : '') + '>' + esc(n) + '</option>';
+    }).join('');
+    var permitidos = D.permitidos || D.estados;
+    var botones = D.estados.map(function (e) {
+      var ok = permitidos.indexOf(e) >= 0;
+      return '<button class="btn b-' + esc(e) + (ok ? '' : ' bloqueado') + '"' +
+        (ok ? ' onclick="elegir(\'' + esc(e) + '\')"' : ' disabled') + '>' + esc(e) + '</button>';
+    }).join('');
+    var esFinal = permitidos.length === 0;
+    var aviso = esFinal
+      ? '<div class="final">Remito entregado &#10003;</div><div class="aviso">Ya no admite cambios. Si hubo un error, avisale a la oficina.</div>'
+      : (D.ultimo && D.ultimo.estado
+          ? '<div class="aviso">Los botones en gris no estan disponibles porque el remito ya esta <b>' + esc(D.ultimo.estado) + '</b>.</div>'
+          : '');
+
+    app.innerHTML =
+      '<div class="card">' +
+        '<h1>Remito</h1>' +
+        '<div class="remito">' + esc(D.remito) + '</div>' +
+        '<div class="cliente">Cliente ' + esc(D.cliente) + (D.nombreCliente ? ' - ' + esc(D.nombreCliente) : '') + '</div>' +
+        '<div class="ultimo" id="ultimo">' + textoUltimo(D.ultimo) + '</div>' +
+      '</div>' +
+      '<div class="card" id="paso1">' +
+        (esFinal ? aviso :
+          '<label for="transp">Transportista</label>' +
+          '<select id="transp">' + opciones + '</select>' +
+          botones + aviso) +
+      '</div>' +
+      '<div class="card oculto" id="paso2">' +
+        '<div class="msg" id="pregunta"></div>' +
+        '<div id="bloqueObs" class="oculto">' +
+          '<label for="obs">Observacion (opcional)</label>' +
+          '<textarea id="obs" placeholder="Ej.: cliente cerrado, mercaderia daniada..."></textarea>' +
+        '</div>' +
+        '<button class="btn b-confirmar" id="btnConfirmar" onclick="confirmar()">Confirmar</button>' +
+        '<button class="btn b-volver" onclick="volver()">Volver</button>' +
+      '</div>' +
+      '<div class="card oculto" id="resultado"></div>';
+  }
+
+  function elegir(estado) {
+    var t = document.getElementById('transp').value;
+    if (!t) { alert('Elegi tu nombre primero.'); return; }
+    elegido = estado;
+    document.getElementById('pregunta').innerHTML = 'Marcar como <b>' + esc(estado) + '</b>?<div class="chico">' + esc(t) + '</div>';
+    document.getElementById('bloqueObs').className = estado === 'Rechazado' ? '' : 'oculto';
+    document.getElementById('paso1').className = 'card oculto';
+    document.getElementById('paso2').className = 'card';
+  }
+
+  function volver() {
+    document.getElementById('paso2').className = 'card oculto';
+    document.getElementById('paso1').className = 'card';
+  }
+
+  function confirmar() {
+    var btn = document.getElementById('btnConfirmar');
+    btn.disabled = true; btn.textContent = 'Registrando...';
+    var t = document.getElementById('transp').value;
+    guardarNombre(t);
+    google.script.run
+      .withSuccessHandler(function (res) {
+        document.getElementById('paso2').className = 'card oculto';
+        var r = document.getElementById('resultado');
+        r.className = 'card msg ok';
+        r.innerHTML = 'Registrado &#10003;<div class="chico">' + esc(elegido) + ' - ' + esc(t) + '</div>';
+        document.getElementById('ultimo').innerHTML = textoUltimo(res && res.ultimo);
+        // Actualiza los permisos por si se vuelve a usar la misma pagina sin recargar.
+        if (res && res.permitidos) { D.ultimo = res.ultimo; D.permitidos = res.permitidos; }
+      })
+      .withFailureHandler(function (err) {
+        var msg = err && err.message ? err.message : String(err);
+        if (msg.indexOf('El remito ya esta') >= 0) {
+          // Otro escaneo lo cambio mientras la pagina estaba abierta: no se registra y se avisa.
+          document.getElementById('paso2').className = 'card oculto';
+          var r = document.getElementById('resultado');
+          r.className = 'card msg error';
+          r.innerHTML = 'No se registro<div class="chico">' + esc(msg) + '<br>Volve a escanear el QR para ver el estado actualizado.</div>';
+          return;
+        }
+        btn.disabled = false; btn.textContent = 'Confirmar';
+        alert('No se pudo registrar: ' + msg + '\nProba de nuevo.');
+      })
+      .registrar({
+        r: D.remito, c: D.cliente, k: D.k, estado: elegido, transportista: t,
+        observacion: elegido === 'Rechazado' ? document.getElementById('obs').value : ''
+      });
+  }
+
+  render();
+</script>
+</body>
+</html>

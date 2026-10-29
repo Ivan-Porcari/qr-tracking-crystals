@@ -1,0 +1,6 @@
+Aqui va la DLL compilada: CRUFLQRRemito.dll
+
+Se genera con:  powershell -ExecutionPolicy Bypass -File ..\compilar.ps1
+(o copiar la DLL ya compilada y probada en el entorno de prueba).
+
+El instalador (scripts\instalar_qr_remito.ps1) la busca en esta carpeta.
